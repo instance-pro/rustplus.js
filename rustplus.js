@@ -73,37 +73,37 @@ class RustPlus extends EventEmitter {
             });
 
             this.websocket.on('message', (data) => {
-                if (data.length < 10) {
-                    const paddedData = Buffer.alloc(10);
-                    data.copy(paddedData);
-                    data = paddedData;
+                if (!(data instanceof Buffer)) {
+                    console.warn("Received non-binary WebSocket message");
+                    return;
                 }
-
                 // decode received message
-                var message = this.AppMessage.decode(data);
+                let message;
+                try {
+                    message = this.AppMessage.decode(data);
+                } catch (err) {
+                    console.error("Failed to decode Protobuf message:", err);
+                    return;
+                }
 
                 // check if received message is a response and if we have a callback registered for it
                 if (message.response && message.response.seq && this.seqCallbacks[message.response.seq]) {
 
                     // get the callback for the response sequence
-                    var callback = this.seqCallbacks[message.response.seq];
+                    const callback = this.seqCallbacks[message.response.seq];
 
                     // call the callback with the response message
-                    var result = callback(message);
+                    const result = callback(message);
 
                     // remove the callback
                     delete this.seqCallbacks[message.response.seq];
 
                     // if callback returns true, don't fire message event
-                    if (result) {
-                        return;
-                    }
-
+                    if(result) return;
                 }
 
                 // fire message event for received messages that aren't handled by callback
-                this.emit('message', this.AppMessage.decode(data));
-
+                this.emit('message', message);
             });
 
             // fire event when disconnected
