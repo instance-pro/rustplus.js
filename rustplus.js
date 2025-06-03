@@ -85,8 +85,23 @@ class RustPlus extends EventEmitter {
 
                 // decode received message
                 let message;
-                
+
                 try {
+                    const reader = protobuf.Reader.create(data);
+                    const tag = reader.uint32();
+                    const wireType = tag & 0x7;
+
+                    if (wireType === 2) {
+                        const messageLength = reader.uint32();
+                        const headerSize = reader.pos;
+                        const totalExpectedLength = headerSize + messageLength;
+                        if (data.length < totalExpectedLength) {
+                            console.warn(
+                                `Incomplete Protobuf message: expected ${totalExpectedLength} bytes, got ${data.length}`
+                            );
+                            return;
+                        }
+                    }
                     message = this.AppMessage.decode(data);
                 } catch (err) {
                     console.error("Failed to decode Protobuf message:", err);
