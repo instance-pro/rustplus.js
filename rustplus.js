@@ -77,12 +77,20 @@ class RustPlus extends EventEmitter {
                     console.warn("Received non-binary WebSocket message");
                     return;
                 }
+
+                if (data.length < 4) {
+                    console.warn("Message too short to decode:", data.length);
+                    return;
+                }
+
                 // decode received message
                 let message;
+                
                 try {
                     message = this.AppMessage.decode(data);
                 } catch (err) {
                     console.error("Failed to decode Protobuf message:", err);
+                    console.debug("Raw buffer:", data.toString('hex'));
                     return;
                 }
 
